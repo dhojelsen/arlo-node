@@ -35,7 +35,7 @@ const Arlo = new arlo(
 Arlo.getDevices();   
 ```
 
-Once logged in the session is stored in the sessions folder until it automatically renews upon expiry.
+Once logged in the session is stored in the `sessions` folder until it automatically renews upon expiry.
 
 
 ## login process with 2FA
