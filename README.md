@@ -49,13 +49,13 @@ sequenceDiagram
     participant EMAIL
     participant ARLOAPI
     CLIENT->>OCAPI: POST email and password to https://ocapi-app.arlo.com/api/auth
-    OCAPI->>CLIENT: replies with token (to be used in header) and userid
+    OCAPI->>CLIENT: Replies with token (to be used in header) and userid
     CLIENT->>OCAPI: GET factors https://ocapi-app.arlo.com/api/getFactors?data=$(date +%s)
-    OCAPI->>CLIENT: replies with factorid of factorType
+    OCAPI->>CLIENT: Replies with factorid of factorType
     CLIENT->>OCAPI: POST factorid and userid https://ocapi-app.arlo.com/api/startAuth
-    OCAPI->>CLIENT: replies with factor code
+    OCAPI->>CLIENT: Replies with factor code
     OCAPI->>EMAIL: A pin is sent to the registered email 
     CLIENT->>OCAPI: POST factorcode and pin to https://ocapi-app.arlo.com/api/finishAuth
-    OCAPI->>CLIENT: replies with final auth token
+    OCAPI->>CLIENT: Replies with final auth token
     CLIENT->>ARLOAPI: Use auth token in header to communicate with https://myapi.arlo.com
 ```
