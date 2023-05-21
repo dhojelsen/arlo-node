@@ -10,6 +10,7 @@ State of the project:
 - [x] Subscribe to events
 - [x] Get devices
 - [x] Arm/Disarm device
+- [x] By pass browser fingerprinting
 - [ ] Map more API functionality
 - [ ] Improve error handling
 - [ ] Add test
