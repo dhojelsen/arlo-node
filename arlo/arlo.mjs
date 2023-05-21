@@ -1,9 +1,21 @@
 import mfa from "./mfa.mjs";
-import fetch from "node-fetch";
+import { gotScraping } from 'got-scraping'
 import {readFile, writeFile} from 'fs/promises'
 
 const TOKEN_FILE = './sessions/tokens.json';
 const ARLO_BASEURL = 'https://myapi.arlo.com';
+const GENERATEDHEADEROPTIONS = {
+    browsers: [
+        {
+            name: 'chrome',
+            minVersion: 110,
+            maxVersion: 110
+        }
+    ],
+    devices: ['desktop'],
+    locales: ['en-US'],
+    operatingSystems: ['linux'],
+}
 
 export default class arlo {
 
@@ -98,12 +110,13 @@ export default class arlo {
         // make sure the client is authorized
         await this.#authorize();
 
-        const resultRaw = await fetch(ARLO_BASEURL + '/hmsweb/users/devices', {
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/hmsweb/users/devices', {
             method: 'GET',
-            headers: this.#defaultHeaders
+            headers: this.#defaultHeaders,
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS
         })
 
-        const response = await resultRaw.json()
+        const response = JSON.parse(resultRaw.body)
 
         console.log(response)
     
@@ -116,9 +129,10 @@ export default class arlo {
 
         let headers = this.#defaultHeaders;
         
-        const resultRaw = await fetch(ARLO_BASEURL + '/hmsweb/users/devices/automation/active', {
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/hmsweb/users/devices/automation/active', {
             method: 'POST',
             headers: headers,
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS,
             body: JSON.stringify({
                 "activeAutomations": [
                     {
@@ -132,7 +146,7 @@ export default class arlo {
                 ]
             })
         })
-        const response = await resultRaw.json()
+        const response = JSON.parse(resultRaw.body)
 
         console.log(response)
 
@@ -143,16 +157,15 @@ export default class arlo {
         // make sure the client is authorized
         await this.#authorize();
 
-        const resultRaw = await fetch(ARLO_BASEURL + '/hmsweb/client/subscribe', {
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/hmsweb/client/subscribe', {
+            isStream: true,
             method: 'GET',
-            headers: this.#defaultHeaders
+            headers: this.#defaultHeaders,
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS
         });
 
-        resultRaw.body.on('readable', () => {
-            let chunk;
-            while (null !== (chunk = resultRaw.body.read())) {
-                this.eventHandler(chunk)
-            }
+        resultRaw.on('data', data => {
+            this.eventHandler(data)
         })
     }
 

@@ -1,7 +1,19 @@
-import fetch from "node-fetch";
+import { gotScraping } from 'got-scraping'
 import Imap from 'imap';
 
 const ARLO_BASEURL = 'https://ocapi-app.arlo.com/api';
+const GENERATEDHEADEROPTIONS = {
+    browsers: [
+        {
+            name: 'chrome',
+            minVersion: 110,
+            maxVersion: 110
+        }
+    ],
+    devices: ['desktop'],
+    locales: ['en-US'],
+    operatingSystems: ['linux'],
+}
 
 /**
  * This module initiates a arlo login, using mail as MFA
@@ -41,22 +53,23 @@ export default class mfa {
 
     async #auth() {
 
-        const resultRaw = await fetch(ARLO_BASEURL + '/auth', {
-            method: 'POST', 
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/auth', {
+            method: 'POST',
             headers: this.#defaultHeaders,
             body: JSON.stringify({
                 email: this.#arloUser,
                 password: btoa(this.#arloPassword),
                 language: 'en',
                 EnvSource: 'prod',
-            })
+            }),
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS
         })
 
-        const response = await resultRaw.json()
-
+        const response = JSON.parse(resultRaw.body)
+       
         this.#arloUserId = response.data.userId;
         this.#arloFactorToken = response.data.token;
-
+        
     }
 
     async #getFactors() {
@@ -64,16 +77,17 @@ export default class mfa {
         const headers = this.#defaultHeaders;
         headers['authorization'] = btoa(this.#arloFactorToken)
 
-        const resultRaw = await fetch(ARLO_BASEURL + '/getFactors?data=' + this.#getTime(), {
-            method: 'GET', 
-            headers: headers
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/getFactors?data=' + this.#getTime(), {
+            method: 'GET',
+            headers: headers,
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS
         })
 
-        const response = await resultRaw.json()
+        const response = JSON.parse(resultRaw.body)
 
         // get factorId for factorType email
         this.#arloFactorId = response.data.items.find(item => item.factorType == 'EMAIL').factorId;
-        
+
     }
 
     async #startAuth() {
@@ -81,9 +95,10 @@ export default class mfa {
         const headers = this.#defaultHeaders;
         headers['authorization'] = btoa(this.#arloFactorToken)
 
-        const resultRaw = await fetch(ARLO_BASEURL + '/startAuth', {
-            method: 'POST', 
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/startAuth', {
+            method: 'POST',
             headers: headers,
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS,
             body: JSON.stringify({
                 factorId: this.#arloFactorId,
                 factorType: "EMAIL",
@@ -91,10 +106,10 @@ export default class mfa {
             })
         })
 
-        const response = await resultRaw.json()
+        const response = JSON.parse(resultRaw.body)
 
         this.#arloFactorAuthCode = response.data.factorAuthCode;
-        
+
     }
 
     async #getPin() {
@@ -140,7 +155,7 @@ export default class mfa {
                                     resolve(buffer.match(/\t+([0-9]{6})/)[1]);
                                 });
                             });
-                            
+
                         });
                     })
                 });
@@ -150,7 +165,7 @@ export default class mfa {
                 console.error(err);
                 resolve(false);
             });
-            
+
             imap.connect();
         });
 
@@ -167,15 +182,15 @@ export default class mfa {
     async #waitForPin() {
 
         return new Promise(resolve => {
-            
+
             const interval = setInterval(() => {
-                if(this.#arloPin) {
+                if (this.#arloPin) {
                     clearInterval(interval);
                     resolve(true)
                 }
             }, 500)
         })
-        
+
     }
 
     async #finishAuth() {
@@ -184,20 +199,21 @@ export default class mfa {
         const headers = this.#defaultHeaders;
         headers['authorization'] = btoa(this.#arloFactorToken)
 
-        const resultRaw = await fetch(ARLO_BASEURL + '/finishAuth', {
-            method: 'POST', 
+        const resultRaw = await gotScraping(ARLO_BASEURL + '/finishAuth', {
+            method: 'POST',
             headers: headers,
+            headerGeneratorOptions: GENERATEDHEADEROPTIONS,
             body: JSON.stringify({
-                factorAuthCode: this.#arloFactorAuthCode, 
-                isBrowserTrusted: true, 
-                otp: this.#arloPin 
+                factorAuthCode: this.#arloFactorAuthCode,
+                isBrowserTrusted: true,
+                otp: this.#arloPin
             })
         })
 
-        const response = await resultRaw.json()
+        const response = JSON.parse(resultRaw.body)
         this.#arloToken = response.data.token;
         this.#arloTokenExpiry = response.data.expiresIn;
-        
+
     }
 
     async getAuthToken() {
@@ -213,7 +229,7 @@ export default class mfa {
         return {
             arloUserId: this.#arloUserId,
             arloToken: this.#arloToken,
-            arloTokenExpiry: this.#arloTokenExpiry 
+            arloTokenExpiry: this.#arloTokenExpiry
         };
     }
 
